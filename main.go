@@ -2,12 +2,12 @@ package main
 
 import (
 	"image/color"
+	"strconv"
 
 	"github.com/go-p5/p5"
 )
 
 func main() {
-	state := " "
 	p5.Run(setup, draw)
 }
 
@@ -39,8 +39,7 @@ func draw() {
 		80, 80,
 	)
 	// fmt.Println(getGrid(p5.Event.Mouse.Position.X, p5.Event.Mouse.Position.Y))
-	p5.Text(States(), 300, 300)
-
+	p5.Text(strconv.Itoa(getGrid(p5.Event.Mouse.Position.X, p5.Event.Mouse.Position.Y)), 300, 300)
 }
 
 func getGrid(x float64, y float64) int {
@@ -52,12 +51,4 @@ func getGrid(x float64, y float64) int {
 		return 0
 	}
 	return row*3 + col + 1
-}
-
-func States() {
-	if state[0] == "X" {
-		state[0] = "O"
-	} else {
-		state = "X"
-	}
 }
