@@ -2,9 +2,18 @@ package main
 
 import (
 	"image/color"
-	"strconv"
+	"os"
+	"time"
 
 	"github.com/go-p5/p5"
+)
+
+var (
+	coord       [9]string
+	state       = "x"
+	prevPressed = false
+	gameOver    = false
+	winPattern  [3]int
 )
 
 func main() {
@@ -14,31 +23,99 @@ func main() {
 func setup() {
 	p5.Canvas(600, 600)
 	p5.Background(color.Gray{Y: 220})
-
 }
 
 func draw() {
-	coord := [9]string{}
-	state := "x"
-	drawGrid()
-
-	switch {
-	case p5.Event.Mouse.Pressed:
-		N := getGrid(p5.Event.Mouse.Position.X, p5.Event.Mouse.Position.Y)
-		p5.Text(strconv.Itoa(N), 300, 300)
-		x, y := getCoord(N)
-		p5.Text(strconv.Itoa(N), x, y)
-		coord[N-1] = state
-		if state == "x" {
-			state = "o"
-		} else {
-			state = "x"
-		}
-	default:
+	if gameOver {
+		drawGrid()
+		states(coord[:])
+		drawWinLine(winPattern)
+		return
 	}
 
+	drawGrid()
 	states(coord[:])
-	// Win(1, 9)
+
+	if p5.Event.Mouse.Pressed && !prevPressed {
+		mousePressed()
+	}
+	prevPressed = p5.Event.Mouse.Pressed
+}
+
+func mousePressed() {
+	N := getGrid(p5.Event.Mouse.Position.X, p5.Event.Mouse.Position.Y)
+	if N == 0 || coord[N-1] != "" {
+		return
+	}
+
+	coord[N-1] = state
+	x, y := getCoord(N)
+	if state == "x" {
+		drawCross(x, y)
+		state = "o"
+	} else {
+		drawCircle(x, y)
+		state = "x"
+	}
+
+	if winner, pattern := checkWin(); winner != "" {
+		println("Winner is: " + winner)
+		winPattern = pattern // Store the winning pattern
+		drawWinLine(pattern)
+		endGame()
+		return
+	}
+
+	if isDraw() {
+		println("The game is a draw!")
+		endGame()
+	}
+}
+
+func checkWin() (string, [3]int) {
+	winPatterns := [8][3]int{
+		{0, 1, 2}, {3, 4, 5}, {6, 7, 8}, // Rows
+		{0, 3, 6}, {1, 4, 7}, {2, 5, 8}, // Columns
+		{0, 4, 8}, {2, 4, 6}, // Diagonals
+	}
+
+	for _, pattern := range winPatterns {
+		if coord[pattern[0]] != "" &&
+			coord[pattern[0]] == coord[pattern[1]] &&
+			coord[pattern[1]] == coord[pattern[2]] {
+			return coord[pattern[0]], pattern
+		}
+	}
+	return "", [3]int{}
+}
+
+func isDraw() bool {
+	for _, val := range coord {
+		if val == "" {
+			return false
+		}
+	}
+	return true
+}
+
+func drawWinLine(pattern [3]int) {
+	if pattern[0] == -1 {
+		return
+	}
+	x1, y1 := getCoord(pattern[0] + 1)
+	x2, y2 := getCoord(pattern[2] + 1)
+
+	p5.StrokeWidth(10)
+	p5.Stroke(color.RGBA{R: 255, G: 0, B: 0, A: 255})
+	p5.Line(x1, y1, x2, y2)
+}
+
+func endGame() {
+	gameOver = true
+	go func() {
+		time.Sleep(3 * time.Second)
+		os.Exit(0)
+	}()
 }
 
 func getGrid(x float64, y float64) int {
@@ -82,28 +159,13 @@ func drawGrid() {
 }
 
 func states(c []string) {
-	// for i := 1; i <= 9; i++ {
-	// 	x, y := getCoord(i)
-	// 	if i%2 == 0 {
-	// 		drawCircle(x, y)
-	// 	} else {
-	// 		drawCross(x, y)
-	// 	}
-	// }
 	for i := 0; i < 9; i++ {
 		if c[i] == "x" {
-			drawCross(getCoord(i + 1))
+			x, y := getCoord(i + 1)
+			drawCross(x, y)
 		} else if c[i] == "o" {
-			drawCircle(getCoord(i + 1))
+			x, y := getCoord(i + 1)
+			drawCircle(x, y)
 		}
 	}
-}
-
-func Win(p1 int, p2 int) {
-	p5.StrokeWidth(30)
-	p5.Stroke(color.RGBA{R: 255, G: 0, B: 0, A: 255})
-	x1, y1 := getCoord(p1)
-	x2, y2 := getCoord(p2)
-
-	p5.Line(x1, y1, x2, y2)
 }
